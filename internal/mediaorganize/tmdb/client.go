@@ -512,7 +512,7 @@ func (c *Client) DownloadImage(ctx context.Context, posterPath, size string) ([]
 			}
 			continue
 		}
-		const maxImage = 8 << 20
+		const maxImage = 32 << 20
 		data, readErr := io.ReadAll(io.LimitReader(resp.Body, maxImage+1))
 		_ = resp.Body.Close()
 		if readErr != nil {

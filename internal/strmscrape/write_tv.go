@@ -39,7 +39,7 @@ type tmdbImageDownloader interface {
 
 // writeOptionalArtwork 将图片下载故障降为警告，但保留取消和本地写入错误。
 func (s *Service) writeOptionalArtwork(ctx context.Context, client tmdbImageDownloader, imagePath, outputPath, label string) (bool, error) {
-	data, err := client.DownloadImage(ctx, imagePath, "w500")
+	data, err := client.DownloadImage(ctx, imagePath, "original")
 	if err != nil {
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return false, ctxErr

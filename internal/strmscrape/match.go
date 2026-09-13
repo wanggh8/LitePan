@@ -235,7 +235,7 @@ func (s *Service) writeMatchedOpts(ctx context.Context, client *tmdb.Client, g w
 		}
 	}
 	if (overwrite || !fileExists(poster)) && strings.TrimSpace(info.PosterPath) != "" {
-		data, err := client.DownloadImage(ctx, info.PosterPath, "w500")
+		data, err := client.DownloadImage(ctx, info.PosterPath, "original")
 		if err != nil {
 			return 0, err
 		}
@@ -394,7 +394,7 @@ func decodeTMDBActors(raw any, limit int) []tmdbActor {
 func buildNFOActors(client *tmdb.Client, actors []tmdbActor) []nfoActor {
 	out := make([]nfoActor, 0, len(actors))
 	for _, actor := range actors {
-		out = append(out, nfoActor{Name: actor.Name, Role: actor.Role, Order: actor.Order, Thumb: client.ImageURL(actor.ProfilePath, "w185")})
+		out = append(out, nfoActor{Name: actor.Name, Role: actor.Role, Order: actor.Order, Thumb: client.ImageURL(actor.ProfilePath, "original")})
 	}
 	return out
 }
