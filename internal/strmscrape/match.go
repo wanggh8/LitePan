@@ -374,9 +374,19 @@ func decodeTMDBActors(raw any, limit int) []tmdbActor {
 		role := strings.TrimSpace(anyString(item["character"]))
 		if role == "" {
 			if roles, _ := item["roles"].([]any); len(roles) > 0 {
-				if first, _ := roles[0].(map[string]any); first != nil {
-					role = strings.TrimSpace(anyString(first["character"]))
+				var charList []string
+				seenRole := map[string]struct{}{}
+				for _, rVal := range roles {
+					rMap, _ := rVal.(map[string]any)
+					charName := strings.TrimSpace(anyString(rMap["character"]))
+					if charName != "" {
+						if _, ok := seenRole[charName]; !ok {
+							seenRole[charName] = struct{}{}
+							charList = append(charList, charName)
+						}
+					}
 				}
+				role = strings.Join(charList, " / ")
 			}
 		}
 		order := len(out)

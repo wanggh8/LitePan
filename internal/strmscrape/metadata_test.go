@@ -395,3 +395,77 @@ func TestWriteOptionalArtworkPreservesCancellation(t *testing.T) {
 		t.Fatalf("任务取消不能被降级为警告，err=%v", err)
 	}
 }
+
+func TestAnyStringNil(t *testing.T) {
+	if got := anyString(nil); got != "" {
+		t.Fatalf("anyString(nil) 期望为空字符串，实际为 %q", got)
+	}
+	if got := anyString("test"); got != "test" {
+		t.Fatalf("anyString(\"test\") 期望为 test，实际为 %q", got)
+	}
+}
+
+func TestDecodeTMDBActors(t *testing.T) {
+	t.Run("电影 credits：包含 character", func(t *testing.T) {
+		payload := map[string]any{
+			"cast": []any{
+				map[string]any{
+					"name":         "Sam Worthington",
+					"character":    "Jake Sully",
+					"profile_path": "/sam.jpg",
+					"order":        0,
+				},
+				map[string]any{
+					"name":         "Zoe Saldana",
+					"character":    nil,
+					"profile_path": nil,
+					"order":        1,
+				},
+			},
+		}
+		actors := decodeTMDBActors(payload, 10)
+		if len(actors) != 2 {
+			t.Fatalf("期望解析 2 位演员，实际 %d", len(actors))
+		}
+		if actors[0].Role != "Jake Sully" || actors[0].ProfilePath != "/sam.jpg" {
+			t.Fatalf("演员 1 数据不符: %+v", actors[0])
+		}
+		if actors[1].Role != "" || actors[1].ProfilePath != "" {
+			t.Fatalf("nil character/profile_path 应为空字符串，实际 %+v", actors[1])
+		}
+	})
+
+	t.Run("电视剧 aggregate_credits：包含 roles 数组", func(t *testing.T) {
+		payload := map[string]any{
+			"cast": []any{
+				map[string]any{
+					"name": "Bryan Cranston",
+					"roles": []any{
+						map[string]any{"character": "Walter White"},
+						map[string]any{"character": "Heisenberg"},
+						map[string]any{"character": "Walter White"}, // 重复项应去重
+					},
+					"profile_path": "/bryan.jpg",
+					"order":        0,
+				},
+				map[string]any{
+					"name":         "Aaron Paul",
+					"roles":        []any{},
+					"profile_path": nil,
+					"order":        1,
+				},
+			},
+		}
+		actors := decodeTMDBActors(payload, 10)
+		if len(actors) != 2 {
+			t.Fatalf("期望解析 2 位演员，实际 %d", len(actors))
+		}
+		if actors[0].Role != "Walter White / Heisenberg" {
+			t.Fatalf("多角色期望以 ' / ' 连接并去重，实际 %q", actors[0].Role)
+		}
+		if actors[1].Role != "" {
+			t.Fatalf("无角色期望为空，实际 %q", actors[1].Role)
+		}
+	})
+}
+
