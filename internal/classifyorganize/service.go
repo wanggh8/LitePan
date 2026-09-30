@@ -305,7 +305,11 @@ func (s *Service) firstMatchingRule(ctx context.Context, state *evaluationState,
 
 func (s *Service) valuesForField(ctx context.Context, state *evaluationState, field string) []string {
 	if field == "type" {
-		values := nonEmptyValues(state.req.MediaType)
+		mt := state.req.MediaType
+		if mt != "movie" {
+			mt = "tv"
+		}
+		values := nonEmptyValues(mt)
 		state.evaluated[field] = append([]string(nil), values...)
 		return values
 	}

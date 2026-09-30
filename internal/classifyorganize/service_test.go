@@ -173,6 +173,15 @@ func TestCustomTemplateNormalizesEnglishCommaAndRejectsInheritedGenreConflict(t 
 	}
 
 	cfg = svc.Config()
+	cfg.Templates[3].Rules = []Rule{
+		{Name: "国漫", Condition: "type=tv，genres=动画，origin_country=CN;TW;HK"},
+		{Name: "动漫", Condition: "type=tv，genres=动画"},
+	}
+	if _, err := svc.Update(context.Background(), cfg); err != nil {
+		t.Fatalf("允许附加了额外限定条件（如 origin_country）时的复合规则并存: %v", err)
+	}
+
+	cfg = svc.Config()
 	cfg.Templates[3].Rules[0].Condition = "type=movie，type=tv"
 	if _, err := svc.Update(context.Background(), cfg); err == nil || !strings.Contains(err.Error(), "不能重复配置字段 type") {
 		t.Fatalf("应拒绝同一条规则重复字段: %v", err)
@@ -268,18 +277,19 @@ func TestBuiltInChildFallbackSupportsRootAndNamedDirectory(t *testing.T) {
 	}
 }
 
-func TestUnrecognizedMediaTypeStillUsesMoveRoot(t *testing.T) {
+func TestUnrecognizedMediaTypeFallsBackToTV(t *testing.T) {
 	svc := newService(t, true)
 	cfg := svc.Config()
 	cfg.SelectedTemplate = TemplateRegion
-	cfg.Templates[1].Rules[0].FallbackMode = "directory"
-	cfg.Templates[1].Rules[0].FallbackDir = "其他"
 	if _, err := svc.Update(context.Background(), cfg); err != nil {
 		t.Fatal(err)
 	}
 	decision, err := svc.Classify(context.Background(), classification.Request{MediaType: "unknown"})
-	if err != nil || decision.Matched || len(decision.RelativeSegments) != 0 {
-		t.Fatalf("一级无法识别时应保持任务目标根: decision=%+v err=%v", decision, err)
+	if err != nil || !decision.Matched {
+		t.Fatalf("非 movie 类型应回退为 tv 并命中电视剧规则: decision=%+v err=%v", decision, err)
+	}
+	if got := strings.Join(decision.RelativeSegments, "/"); !strings.Contains(got, "电视剧") {
+		t.Fatalf("期望归入电视剧目录，实际: %s", got)
 	}
 }
 
@@ -485,5 +495,42 @@ func TestFirstMatchingRuleEvidenceUsesWinningField(t *testing.T) {
 	}
 	if state.evaluatedField != "type" || len(state.evaluatedValues) != 1 || state.evaluatedValues[0] != "movie" {
 		t.Fatalf("证据应记录命中规则(type)的字段值，得到 field=%q values=%v", state.evaluatedField, state.evaluatedValues)
+	}
+}
+
+func TestCustomTemplateDifferentiatesByOriginCountry(t *testing.T) {
+	svc := newService(t, true)
+	cfg := svc.Config()
+	cfg.SelectedTemplate = TemplateCustom
+	cfg.Templates[3].Rules = []Rule{
+		{Name: "国漫", Condition: "type=tv，genres=动画，origin_country=CN;TW;HK"},
+		{Name: "动漫", Condition: "type=tv，genres=动画"},
+	}
+	if _, err := svc.Update(context.Background(), cfg); err != nil {
+		t.Fatalf("保存配置失败: %v", err)
+	}
+
+	// 1. 国产动画 -> 应命中 国漫
+	cnDecision, err := svc.Classify(context.Background(), classification.Request{
+		MediaType: "tv",
+		Raw: map[string]any{
+			"genres": []any{"动画", "动作"},
+			"origin_country": []any{"CN"},
+		},
+	})
+	if err != nil || !cnDecision.Matched || cnDecision.Category != "国漫" {
+		t.Fatalf("国产动画应匹配 国漫, got=%+v err=%v", cnDecision, err)
+	}
+
+	// 2. 日本动画 -> 应命中 动漫
+	jpDecision, err := svc.Classify(context.Background(), classification.Request{
+		MediaType: "tv",
+		Raw: map[string]any{
+			"genres": []any{"动画"},
+			"origin_country": []any{"JP"},
+		},
+	})
+	if err != nil || !jpDecision.Matched || jpDecision.Category != "动漫" {
+		t.Fatalf("日本动画应匹配 动漫, got=%+v err=%v", jpDecision, err)
 	}
 }

@@ -372,13 +372,14 @@ func normalizeFallbackDir(rule *Rule, templateName string) error {
 
 func validateCustomGenreConflicts(rules []Rule) error {
 	type scopedGenres struct {
-		path   string
-		types  map[string]bool
-		genres map[string]string
+		path        string
+		types       map[string]bool
+		genres      map[string]string
+		extraFields map[string]string
 	}
 	entries := make([]scopedGenres, 0)
-	var walk func([]Rule, []string, map[string]bool) error
-	walk = func(items []Rule, parentPath []string, parentTypes map[string]bool) error {
+	var walk func([]Rule, []string, map[string]bool, map[string]string) error
+	walk = func(items []Rule, parentPath []string, parentTypes map[string]bool, parentExtras map[string]string) error {
 		for _, rule := range items {
 			conditions, err := parseExpression(rule.Condition)
 			if err != nil {
@@ -387,6 +388,7 @@ func validateCustomGenreConflicts(rules []Rule) error {
 			path := append(append([]string(nil), parentPath...), rule.Name)
 			types := cloneStringSet(parentTypes)
 			genres := make(map[string]string)
+			extras := cloneStringMap(parentExtras)
 			for _, condition := range conditions {
 				switch condition.Field {
 				case "type":
@@ -395,12 +397,19 @@ func validateCustomGenreConflicts(rules []Rule) error {
 					for _, value := range condition.Values {
 						genres[strings.ToLower(value)] = value
 					}
+				default:
+					extras[condition.Field] = strings.ToLower(strings.Join(condition.Values, ";"))
 				}
 			}
 			if len(genres) > 0 && (types == nil || len(types) > 0) {
-				entry := scopedGenres{path: strings.Join(path, "/"), types: types, genres: genres}
+				entry := scopedGenres{path: strings.Join(path, "/"), types: types, genres: genres, extraFields: extras}
 				for _, previous := range entries {
 					if !stringSetsOverlap(previous.types, entry.types) {
+						continue
+					}
+					// 若两条规则拥有不同的额外限定条件（例如一个限定了 origin_country 而另一个未限定，或限定不同），
+					// 则特异度更高者优先匹配或两者互斥，不构成同级二义性冲突。
+					if !mapStringEquals(previous.extraFields, entry.extraFields) {
 						continue
 					}
 					for key, value := range entry.genres {
@@ -412,14 +421,37 @@ func validateCustomGenreConflicts(rules []Rule) error {
 				entries = append(entries, entry)
 			}
 			if len(rule.Children) > 0 {
-				if err := walk(rule.Children, path, types); err != nil {
+				if err := walk(rule.Children, path, types, extras); err != nil {
 					return err
 				}
 			}
 		}
 		return nil
 	}
-	return walk(rules, nil, nil)
+	return walk(rules, nil, nil, nil)
+}
+
+func cloneStringMap(source map[string]string) map[string]string {
+	if source == nil {
+		return make(map[string]string)
+	}
+	cloned := make(map[string]string, len(source))
+	for k, v := range source {
+		cloned[k] = v
+	}
+	return cloned
+}
+
+func mapStringEquals(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, v := range a {
+		if b[k] != v {
+			return false
+		}
+	}
+	return true
 }
 
 func cloneStringSet(source map[string]bool) map[string]bool {

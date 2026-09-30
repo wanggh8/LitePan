@@ -207,3 +207,31 @@ func TestBuildPlayURLUnescapedFilename(t *testing.T) {
 		t.Fatalf("BuildPlayURL() = %q, want %q", url, want)
 	}
 }
+
+func TestSignPathDecoupledFromFilename(t *testing.T) {
+	secret := []byte("test-secret-key-12345")
+	path1 := "/api/strm/play/6/MzI2OTQ2MTMyNzEzMDY1NjAzMQ/t/token/n/间谍过家家.mkv"
+	path2 := "/api/strm/play/6/MzI2OTQ2MTMyNzEzMDY1NjAzMQ/t/token/n/任意其他名字.mkv"
+	path3Tampered := "/api/strm/play/6/MzI2OTQ2MTMyNzEzMDY1NjAzMQ/t/wrong_token/n/间谍过家家.mkv"
+
+	sig1 := SignPath(path1, secret)
+	sig2 := SignPath(path2, secret)
+
+	// 1. 同一文件和token，不同文件名生成的签名完全相同
+	if sig1 != sig2 {
+		t.Fatalf("签名应与文件名解耦，但 sig1=%q != sig2=%q", sig1, sig2)
+	}
+
+	// 2. 验证通过
+	if !VerifyPath(path1, sig1, secret) {
+		t.Fatal("VerifyPath path1 failed")
+	}
+	if !VerifyPath(path2, sig1, secret) {
+		t.Fatal("VerifyPath path2 failed")
+	}
+
+	// 3. 核心凭证被篡改时必须失败
+	if VerifyPath(path3Tampered, sig1, secret) {
+		t.Fatal("VerifyPath should fail on tampered token")
+	}
+}
