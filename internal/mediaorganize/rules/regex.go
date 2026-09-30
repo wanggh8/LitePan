@@ -52,7 +52,7 @@ var (
 		regexp.MustCompile(`(?i)\{\[\s*tmdbid\s*=\s*(\d+)\s*`),
 	}
 
-	organizedStructureRe = regexp.MustCompile(`(?i)^.+?\s\((?:19|20)\d{2}\)(?:\s+S\d{1,3}E\d{1,4})?(?:\s+\[[^\]]*\])?\.[^.]+$`)
+	organizedStructureRe = regexp.MustCompile(`(?i)^(?:.+?\s\((?:19|20)\d{2}\)|.+?\.(?:19|20)\d{2}\.S\d{1,3}E\d{1,4})(?:\s+-\s+[^.]+(?:\.[^.]+)*)?\.([^.]+)$`)
 	titleNoiseRe         = regexp.MustCompile(`(?i)www\.|https?://|(?:\.com|\.net|\.org|\.cc|\.tv|\.me|\.io)\b|发布|影视之家|资源网|论坛|社区`)
 	resolutionInTitleRe  = regexp.MustCompile(`(?i)\d{3,4}p`)
 	sceneKeywordsRe      = regexp.MustCompile(`(?i)\b(?:WEB[- ]?DL|BluRay|REMUX|HDTV|HEVC|x265|DTS)\b`)

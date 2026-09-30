@@ -175,7 +175,7 @@ func BuildMediaInfoTags(parsed ParsedMedia, tagOrder []string) string {
 	if len(parts) == 0 {
 		return ""
 	}
-	return "[" + strings.Join(parts, " ") + "]"
+	return strings.Join(parts, ".")
 }
 
 func containsStr(list []string, s string) bool {

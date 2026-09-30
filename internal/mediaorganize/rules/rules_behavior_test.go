@@ -690,3 +690,58 @@ func TestIsCollectionContainerDirKeywords(t *testing.T) {
 		}
 	}
 }
+
+func TestNewNamingRules(t *testing.T) {
+	// 1. 电影命名：奥本海默 (2023)
+	movieParsed := ParsedMedia{
+		Title: "奥本海默",
+		Year:  intPtr(2023),
+	}
+	if got := BuildTargetFilename(movieParsed, "off", ""); got != "奥本海默 (2023)" {
+		t.Fatalf("电影目标名生成错误，got %q，want %q", got, "奥本海默 (2023)")
+	}
+
+	// 2. 普通剧集命名（两位数集数）：花开锦绣.2026.S01E01
+	tvParsed := ParsedMedia{
+		Title:   "花开锦绣",
+		Year:    intPtr(2026),
+		Season:  intPtr(1),
+		Episode: intPtr(1),
+	}
+	if got := BuildTargetFilename(tvParsed, "off", ""); got != "花开锦绣.2026.S01E01" {
+		t.Fatalf("普通剧集目标名生成错误，got %q，want %q", got, "花开锦绣.2026.S01E01")
+	}
+
+	// 3. 有三位数的剧集命名：第1集三位补零，第120集三位补零
+	tv100ParsedEp1 := ParsedMedia{
+		Title:         "花开锦绣",
+		Year:          intPtr(2026),
+		Season:        intPtr(1),
+		Episode:       intPtr(1),
+		EpisodeDigits: 3,
+	}
+	if got := BuildTargetFilename(tv100ParsedEp1, "off", ""); got != "花开锦绣.2026.S01E001" {
+		t.Fatalf("三位数剧集第1集目标名生成错误，got %q，want %q", got, "花开锦绣.2026.S01E001")
+	}
+
+	tv100ParsedEp120 := ParsedMedia{
+		Title:   "花开锦绣",
+		Year:    intPtr(2026),
+		Season:  intPtr(1),
+		Episode: intPtr(120),
+	}
+	if got := BuildTargetFilename(tv100ParsedEp120, "off", ""); got != "花开锦绣.2026.S01E120" {
+		t.Fatalf("第120集目标名生成错误，got %q，want %q", got, "花开锦绣.2026.S01E120")
+	}
+
+	// 4. 标签格式：点分隔，无方括号
+	tags := BuildMediaInfoTags(ParsedMedia{
+		ScreenSize:    "2160p",
+		VideoCodec:    "H.265",
+		AudioCodec:    "DDP",
+		AudioChannels: "5.1",
+	}, DefaultMediaTagOrder)
+	if tags != "2160p.H.265.DDP.5.1" {
+		t.Fatalf("媒体标签生成错误，got %q，want %q", tags, "2160p.H.265.DDP.5.1")
+	}
+}

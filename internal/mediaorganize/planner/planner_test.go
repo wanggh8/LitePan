@@ -709,7 +709,7 @@ func TestRenamePlanSkipsAlreadyOrganizedTVFiles(t *testing.T) {
 	for i := 1; i <= 3; i++ {
 		files = append(files, domain.FileItem{
 			ID:   fmt.Sprintf("ep%02d", i),
-			Name: fmt.Sprintf("钢铁森林 (2026) S01E%02d [2160p H.265 DDP 5.1].mkv", i),
+			Name: fmt.Sprintf("钢铁森林.2026.S01E%02d - 2160p.H.265.DDP.5.1.mkv", i),
 		})
 	}
 	fs := &mockFS{dirs: map[string][]domain.FileItem{
@@ -923,7 +923,7 @@ func TestRenamePlanAddsTMDBToMultipleStructuredMovieDirs(t *testing.T) {
 			{ID: "d4", Name: "飞驰人生 (2019) {tmdb-575219}", IsDir: true},
 		},
 		"d1": {
-			{ID: "f1", Name: "东北警察故事2 (2023) [2160p H.265 DDP 5.1].mkv"},
+			{ID: "f1", Name: "东北警察故事2 (2023) - 2160p.H.265.DDP.5.1.mkv"},
 		},
 		"d2": {
 			{ID: "f2", Name: "东北警察故事3 (2026) [2160p H.265 DTS 5.1].mp4"},
@@ -1066,7 +1066,7 @@ func TestRenamePlanReportsMissingTMDBForStructuredMovieDir(t *testing.T) {
 		"root": {{ID: "movie", Name: "东北警察故事2 (2023)", IsDir: true}},
 		"movie": {{
 			ID:   "f1",
-			Name: "东北警察故事2 (2023) [2160p H.265 DDP 5.1].mkv",
+			Name: "东北警察故事2 (2023) - 2160p.H.265.DDP.5.1.mkv",
 		}},
 	}}
 	p := planner.New(
@@ -1165,7 +1165,7 @@ func TestRenamePlanSkipsAlreadyOrganizedTVFilesWhenTMDBFails(t *testing.T) {
 	for i := 1; i <= 3; i++ {
 		files = append(files, domain.FileItem{
 			ID:   fmt.Sprintf("ep%02d", i),
-			Name: fmt.Sprintf("钢铁森林 (2026) S01E%02d [2160p H.265 DDP 5.1].mkv", i),
+			Name: fmt.Sprintf("钢铁森林.2026.S01E%02d - 2160p.H.265.DDP.5.1.mkv", i),
 		})
 	}
 	fs := &mockFS{dirs: map[string][]domain.FileItem{
@@ -1250,7 +1250,7 @@ func TestMovePlanMovesAlreadyOrganizedTVFilesToEmptyTarget(t *testing.T) {
 	for i := 1; i <= 3; i++ {
 		files = append(files, domain.FileItem{
 			ID:   fmt.Sprintf("ep%02d", i),
-			Name: fmt.Sprintf("钢铁森林 (2026) S01E%02d [2160p H.265 DDP 5.1].mkv", i),
+			Name: fmt.Sprintf("钢铁森林.2026.S01E%02d - 2160p.H.265.DDP.5.1.mkv", i),
 		})
 	}
 	fs := &mockFS{dirs: map[string][]domain.FileItem{
@@ -1308,7 +1308,7 @@ func TestMovePlanMovesAlreadyOrganizedTVFilesToEmptyTarget(t *testing.T) {
 }
 
 func TestMovePlanSkipsAlreadyOrganizedTVFileWhenTargetExists(t *testing.T) {
-	filename := "钢铁森林 (2026) S01E01 [2160p H.265 DDP 5.1].mkv"
+	filename := "钢铁森林.2026.S01E01 - 2160p.H.265.DDP.5.1.mkv"
 	fs := &mockFS{dirs: map[string][]domain.FileItem{
 		"root": {
 			{ID: "show", Name: "钢铁森林 (2026) {tmdb-281392}", IsDir: true},
@@ -1371,7 +1371,7 @@ func TestMovePlanSkipsAlreadyOrganizedTVFileWhenTargetExists(t *testing.T) {
 }
 
 func TestMovePlanMarksOverwriteTargetWhenTargetExists(t *testing.T) {
-	filename := "钢铁森林 (2026) S01E01 [2160p H.265 DDP 5.1].mkv"
+	filename := "钢铁森林.2026.S01E01 - 2160p.H.265.DDP.5.1.mkv"
 	fs := &mockFS{dirs: map[string][]domain.FileItem{
 		"root": {
 			{ID: "show", Name: "钢铁森林 (2026) {tmdb-281392}", IsDir: true},
@@ -1708,8 +1708,8 @@ func TestPlanFlatAbsoluteEpisodesBeyond99(t *testing.T) {
 		episode    int
 		targetPart string
 	}{
-		{id: "e001", episode: 1, targetPart: "S01E01"},
-		{id: "e099", episode: 99, targetPart: "S01E99"},
+		{id: "e001", episode: 1, targetPart: "S01E001"},
+		{id: "e099", episode: 99, targetPart: "S01E099"},
 		{id: "e100", episode: 100, targetPart: "S01E100"},
 		{id: "e157", episode: 157, targetPart: "S01E157"},
 	} {
@@ -1884,7 +1884,7 @@ func TestMovePlanDeletesEmptyCategoryDirsAfterWholeAndFileMoves(t *testing.T) {
 }
 
 func TestMovePlanToleratesFetchTVSeasonsFailureForOrganizedTV(t *testing.T) {
-	filename := "钢铁森林 (2026) S01E01 [2160p H.265 DDP 5.1].mkv"
+	filename := "钢铁森林.2026.S01E01 - 2160p.H.265.DDP.5.1.mkv"
 	fs := &mockFS{dirs: map[string][]domain.FileItem{
 		"root": {
 			{ID: "show", Name: "钢铁森林 (2026) {tmdb-281392}", IsDir: true},
@@ -1939,7 +1939,7 @@ func TestMovePlanToleratesFetchTVSeasonsFailureForOrganizedTV(t *testing.T) {
 }
 
 func TestMovePlanToleratesTMDBSearchFailureWhenOrganizedIDPreserved(t *testing.T) {
-	filename := "钢铁森林 (2026) S01E01 [2160p H.265 DDP 5.1].mkv"
+	filename := "钢铁森林.2026.S01E01 - 2160p.H.265.DDP.5.1.mkv"
 	fs := &mockFS{dirs: map[string][]domain.FileItem{
 		"root": {
 			{ID: "show", Name: "钢铁森林 (2026) {tmdb-281392}", IsDir: true},

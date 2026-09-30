@@ -483,7 +483,7 @@ func TestManualTMDBMatchReplansAndAppliesUnmatchedWork(t *testing.T) {
 	if fileAction == nil || fmt.Sprint(fileAction.Metadata["tmdb_id"]) != "999001" {
 		t.Fatalf("手动匹配后未生成带 TMDB ID 的文件动作: %+v", matchedPlan.Actions)
 	}
-	if !strings.Contains(fileAction.TargetName, "模拟电影 - Mock Movie (2026)") {
+	if !strings.Contains(fileAction.TargetName, "模拟电影 (2026)") {
 		t.Fatalf("手动匹配后文件名不正确: %q", fileAction.TargetName)
 	}
 
@@ -498,7 +498,7 @@ func TestManualTMDBMatchReplansAndAppliesUnmatchedWork(t *testing.T) {
 		}
 	}
 	newWorkDirID := "target/模拟电影 (2026) {tmdb-999001}"
-	if len(fs.dirs[newWorkDirID]) != 1 || !strings.Contains(fs.dirs[newWorkDirID][0].Name, "模拟电影 - Mock Movie (2026)") {
+	if len(fs.dirs[newWorkDirID]) != 1 || !strings.Contains(fs.dirs[newWorkDirID][0].Name, "模拟电影 (2026)") {
 		t.Fatalf("执行后媒体文件未正确移动和改名: %+v", fs.dirs[newWorkDirID])
 	}
 	foundWorkDir := false

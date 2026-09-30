@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"unicode"
 )
 
 func SanitizeFilename(name string) string {
@@ -45,15 +44,18 @@ func BuildFolderName(parsed ParsedMedia, tmdbID string) string {
 	return strings.TrimSpace(strings.Join(parts, " "))
 }
 
+// BuildTargetFilename 生成目标文件名（不含扩展名）。
+// 电影格式：标题 (年份) [标记]
+// 剧集格式：标题.年份.SxxExx（点分隔，年份无括号）
 func BuildTargetFilename(parsed ParsedMedia, marker, tmdbID string) string {
 	title := strings.TrimSpace(parsed.Title)
 	if title == "" {
 		return ""
 	}
-	parts := []string{title}
-	if parsed.Year != nil {
-		parts = append(parts, fmt.Sprintf("(%d)", *parsed.Year))
-	}
+
+	season := asFirstInt(parsed.Season)
+	episode := asFirstInt(parsed.Episode)
+	isTV := season != nil && episode != nil
 
 	tag := ""
 	if !IsMarkerOff(marker) {
@@ -68,62 +70,67 @@ func BuildTargetFilename(parsed ParsedMedia, marker, tmdbID string) string {
 			}
 		}
 	}
-	if tag != "" {
-		parts = append(parts, tag)
+
+	if isTV {
+		// 剧集：标题.年份.SxxExx（点分隔，年份无括号，标记紧跟年份后）
+		parts := []string{title}
+		if parsed.Year != nil {
+			parts = append(parts, fmt.Sprintf("%d", *parsed.Year))
+		}
+		if tag != "" {
+			parts = append(parts, tag)
+		}
+		digits := 2
+		if parsed.EpisodeDigits >= 3 || *episode >= 100 {
+			digits = 3
+		}
+		return strings.Join(parts, ".") + fmt.Sprintf(".S%02dE%0*d", *season, digits, *episode)
 	}
 
-	season := asFirstInt(parsed.Season)
-	episode := asFirstInt(parsed.Episode)
-	if season != nil && episode != nil {
-		parts = append(parts, fmt.Sprintf("S%02dE%02d", *season, *episode))
+	// 电影：标题 (年份) [标记]（空格分隔，年份带括号）
+	parts := []string{title}
+	if parsed.Year != nil {
+		parts = append(parts, fmt.Sprintf("(%d)", *parsed.Year))
+	}
+	if tag != "" {
+		parts = append(parts, tag)
 	}
 	return strings.Join(parts, " ")
 }
 
 func BuildDisplayTitle(tmdbTitle, tmdbOriginal, fallbackTitle string) string {
-	if tmdbTitle == "" {
-		return fallbackTitle
-	}
-	if tmdbOriginal == "" || strings.EqualFold(tmdbOriginal, tmdbTitle) {
+	if tmdbTitle != "" {
 		return tmdbTitle
 	}
-	if isLatinScript(tmdbOriginal) {
-		return tmdbTitle + " - " + tmdbOriginal
-	}
-	return tmdbTitle
+	return fallbackTitle
 }
 
 func FitFilenameBytes(filename, tmdbLang string) string {
 	if len([]byte(filename)) <= MaxFilenameBytes {
 		return filename
 	}
-	m := dualTitleRe.FindStringSubmatch(filename)
-	if m != nil {
-		title1, title2, year, rest := m[1], m[2], m[3], m[4]
-		short := title2 + " (" + year + ")" + rest
-		if strings.HasPrefix(strings.ToLower(tmdbLang), "zh") {
-			short = title1 + " (" + year + ")" + rest
-		}
-		if len([]byte(short)) <= MaxFilenameBytes {
-			return short
-		}
-		filename = short
-	}
-	matches := bracketTagRe.FindAllStringSubmatchIndex(filename, -1)
-	if len(matches) == 0 {
+	// 逐步删减 " - tag1.tag2..." 部分的末尾 tag
+	sep := " - "
+	sepIdx := strings.LastIndex(filename, sep)
+	if sepIdx < 0 {
 		return filename
 	}
-	last := matches[len(matches)-1]
-	tagContent := filename[last[2]:last[3]]
-	tags := strings.Fields(tagContent)
-	for i := len(tags); i > 0; i-- {
-		newTag := "[" + strings.Join(tags[:i], " ") + "]"
-		short := filename[:last[0]] + newTag + filename[last[1]:]
+	afterSep := filename[sepIdx+len(sep):]
+	dotIdx := strings.LastIndex(afterSep, ".")
+	if dotIdx < 0 {
+		return filename
+	}
+	ext := afterSep[dotIdx:]  // ".mkv"
+	tags := afterSep[:dotIdx] // "2160p.HDR10.TrueHD"
+	tagParts := strings.Split(tags, ".")
+	for i := len(tagParts); i > 0; i-- {
+		newTags := strings.Join(tagParts[:i], ".")
+		short := filename[:sepIdx] + sep + newTags + ext
 		if len([]byte(short)) <= MaxFilenameBytes {
 			return short
 		}
 	}
-	return filename[:last[0]] + filename[last[1]:]
+	return filename[:sepIdx] + ext
 }
 
 func IsAlreadyOrganized(filename, marker string) bool {
@@ -152,29 +159,6 @@ func IsMarkerOff(marker string) bool {
 	}
 }
 
-func isLatinScript(text string) bool {
-	if text == "" {
-		return false
-	}
-	hasLetter := false
-	for _, ch := range text {
-		if unicode.IsSpace(ch) || strings.ContainsRune(".,:;'\"-_!?()&+/", ch) {
-			continue
-		}
-		if unicode.IsDigit(ch) {
-			continue
-		}
-		if (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') ||
-			(ch >= 0x00C0 && ch <= 0x024F) || (ch >= 0x1E00 && ch <= 0x1EFF) {
-			hasLetter = true
-			continue
-		}
-		return false
-	}
-	return hasLetter
-}
-
 var (
-	dualTitleRe  = regexp.MustCompile(`^(.+?) - (.+?) \((\d{4})\)(.*)$`)
 	bracketTagRe = regexp.MustCompile(`\[([^\]]+)\]`)
 )

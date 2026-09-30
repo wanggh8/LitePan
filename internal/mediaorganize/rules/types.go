@@ -5,6 +5,7 @@ type ParsedMedia struct {
 	Year          *int
 	Season        *int
 	Episode       *int
+	EpisodeDigits int
 	ScreenSize    string
 	FrameRate     string
 	VideoCodec    string

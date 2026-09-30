@@ -86,7 +86,7 @@ func TestReplanMatchedGroupRebuildsTVWorkDir(t *testing.T) {
 	if got, want := plan.Actions[fileIdx].TargetParentID, "ref:"+plan.Actions[seasonIdx].ID; got != want {
 		t.Fatalf("文件动作未指向季目录: %+v", plan.Actions[fileIdx])
 	}
-	if !strings.Contains(plan.Actions[fileIdx].TargetName, "转生贵族的异世界冒险录 (2023) S01E01") {
+	if !strings.Contains(plan.Actions[fileIdx].TargetName, "转生贵族的异世界冒险录.2023.S01E01") {
 		t.Fatalf("文件名未使用手动匹配后的标准名: %q", plan.Actions[fileIdx].TargetName)
 	}
 	var cleanup *moplan.PlanAction

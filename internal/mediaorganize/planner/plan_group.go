@@ -237,6 +237,30 @@ func (p *Planner) planGroupWithMatch(
 	seasonDirCache := map[int]string{}
 	seasonDirRenameCache := map[string]*moplan.PlanAction{}
 
+	seasonMaxEp := map[int]int{}
+	if isTV {
+		for _, entry := range items {
+			sn := 1
+			if entry.fileParsed.Season != nil {
+				sn = *entry.fileParsed.Season
+			}
+			if entry.fileParsed.Episode != nil && *entry.fileParsed.Episode > seasonMaxEp[sn] {
+				seasonMaxEp[sn] = *entry.fileParsed.Episode
+			}
+		}
+		if tmdbID != "" && p.useTMDB && p.tmdbAvailable {
+			if tvSeasons, err := p.getTVSeasons(tmdbID); err == nil {
+				for _, s := range tvSeasons {
+					if sn := rules.AsFirstInt(s["season_number"]); sn != nil {
+						if ec := rules.AsFirstInt(s["episode_count"]); ec != nil && *ec > seasonMaxEp[*sn] {
+							seasonMaxEp[*sn] = *ec
+						}
+					}
+				}
+			}
+		}
+	}
+
 	for _, entry := range items {
 		if err := p.checkStop(); err != nil {
 			return err
@@ -317,11 +341,20 @@ func (p *Planner) planGroupWithMatch(
 		}
 		mediaInfoTag := rules.BuildMediaInfoTags(parsedForTag, p.mediaTagOrder)
 
+		epDigits := 2
+		curSeasonNum := 1
+		if currentSeason != nil {
+			curSeasonNum = *currentSeason
+		}
+		if seasonMaxEp[curSeasonNum] >= 100 || (currentEpisode != nil && *currentEpisode >= 100) {
+			epDigits = 3
+		}
 		fileInfo := rules.ParsedMedia{
-			Title:   displayTitle,
-			Year:    currentYear,
-			Season:  currentSeason,
-			Episode: currentEpisode,
+			Title:         displayTitle,
+			Year:          currentYear,
+			Season:        currentSeason,
+			Episode:       currentEpisode,
+			EpisodeDigits: epDigits,
 		}
 		base := rules.BuildTargetFilename(fileInfo, p.marker, tmdbID)
 		if base == "" {
@@ -533,9 +566,9 @@ func chooseTargetDirName(needsRename bool, oldName, newName string) string {
 func composeFilename(base, mediaTag, ext string) string {
 	if mediaTag != "" {
 		if ext != "" {
-			return base + " " + mediaTag + "." + ext
+			return base + " - " + mediaTag + "." + ext
 		}
-		return base + " " + mediaTag
+		return base + " - " + mediaTag
 	}
 	if ext != "" {
 		return base + "." + ext
