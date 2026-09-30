@@ -2,14 +2,24 @@ package strm
 
 import (
 	"fmt"
-	"net/url"
 	"strconv"
+	"strings"
 )
+
+var rawFilenameReplacer = strings.NewReplacer(
+	"/", "",
+	"\\", "",
+	"?", "",
+	"#", "",
+)
+
+func safeURLFilename(fileName string) string {
+	return strings.TrimSpace(rawFilenameReplacer.Replace(fileName))
+}
 
 func BuildPlayPath(accountID int64, fileID, fileName, token string, signEnabled bool, secret []byte) string {
 	account := strconv.FormatInt(accountID, 10)
-	escapedName := url.PathEscape(fileName)
-	path := fmt.Sprintf("/api/strm/play/%s/%s/t/%s/n/%s", account, EncodeFileKey(fileID), token, escapedName)
+	path := fmt.Sprintf("/api/strm/play/%s/%s/t/%s/n/%s", account, EncodeFileKey(fileID), token, safeURLFilename(fileName))
 	if signEnabled {
 		path += "/s/" + SignPath(path, secret)
 	}
@@ -29,8 +39,7 @@ func BuildPlayURL(baseURL string, accountID int64, fileID, fileName, token strin
 // 当前扫描任务仍使用文件 ID 格式；该格式供后续目录树导入等无法预先取得文件 ID 的场景使用。
 func BuildPathPlayPath(accountID int64, rootID, relativePath, fileName, token string, signEnabled bool, secret []byte) string {
 	account := strconv.FormatInt(accountID, 10)
-	escapedName := url.PathEscape(fileName)
-	path := fmt.Sprintf("/api/strm/path/%s/%s/%s/t/%s/n/%s", account, EncodePathKey(rootID), EncodePathKey(relativePath), token, escapedName)
+	path := fmt.Sprintf("/api/strm/path/%s/%s/%s/t/%s/n/%s", account, EncodePathKey(rootID), EncodePathKey(relativePath), token, safeURLFilename(fileName))
 	if signEnabled {
 		path += "/s/" + SignPath(path, secret)
 	}

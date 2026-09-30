@@ -745,3 +745,48 @@ func TestNewNamingRules(t *testing.T) {
 		t.Fatalf("媒体标签生成错误，got %q，want %q", tags, "2160p.H.265.DDP.5.1")
 	}
 }
+
+func TestMultiSeasonRangeNotRecognizedAsSeasonDir(t *testing.T) {
+	d1 := "小谢尔顿 (2017) S01-S07 1080P Web [内封简繁中字] ⭐豆瓣 9.3 HiveWeb 108.36GB"
+	d2 := "Young.Sheldon.S02.1080p.DSNP.WEB-DL.DDP5.1.H.264-HiveWeb"
+	anc := []Ancestor{
+		{ID: "d1", Name: d1},
+		{ID: "d2", Name: d2},
+	}
+
+	// 1. 一级目录不应被识别为季目录
+	if IsSeasonDirName(d1) {
+		t.Fatalf("S01-S07 跨季目录 %q 不应被识别为季目录", d1)
+	}
+	if !IsMultiSeasonRangeDir(d1) {
+		t.Fatalf("S01-S07 跨季目录 %q 应该被识别为多季范围目录", d1)
+	}
+	if IsSingleSeasonShowDir(d1) {
+		t.Fatalf("S01-S07 跨季目录 %q 不应被识别为单季作品根", d1)
+	}
+
+	// 2. 二级目录应被正确识别为第 2 季
+	if !IsSeasonDirName(d2) {
+		t.Fatalf("二级目录 %q 应该被识别为季目录", d2)
+	}
+	sn := ParseSeasonDirNumber(d2)
+	if sn == nil || *sn != 2 {
+		t.Fatalf("二级目录 %q 应解析为第 2 季，got %v", d2, sn)
+	}
+
+	// 3. 作品名应正确取自一级目录（小谢尔顿），二级目录应作为季目录
+	fp := NormalizeParsedMedia(ParseFilenameStrict("Young.Sheldon.S02E01.1080p.mkv"))
+	showID, _, parsed := PickTVShowInfo(anc, fp)
+	if showID != "d1" {
+		t.Fatalf("作品目录应为一级目录 d1，实际为 %q", showID)
+	}
+	if parsed.Title != "小谢尔顿" {
+		t.Fatalf("剧集标题应为 小谢尔顿，实际为 %q", parsed.Title)
+	}
+
+	// 4. 文件继承季号应为 2
+	prep := PrepareTVFileParsed(fp, anc)
+	if prep.Season == nil || *prep.Season != 2 {
+		t.Fatalf("文件最终继承季号应为 2，实际为 %v", prep.Season)
+	}
+}

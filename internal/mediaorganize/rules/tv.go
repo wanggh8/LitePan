@@ -15,6 +15,9 @@ func ParseSeasonDirNumber(name string) *int {
 	if raw == "" {
 		return nil
 	}
+	if IsMultiSeasonRangeDir(raw) {
+		return nil
+	}
 	for _, item := range seasonDirPatterns {
 		if m := item.re.FindStringSubmatch(raw); len(m) >= 2 {
 			if n := item.extract(m); n != nil {
@@ -23,6 +26,16 @@ func ParseSeasonDirNumber(name string) *int {
 		}
 	}
 	return nil
+}
+
+// IsMultiSeasonRangeDir 判断目录名称是否包含多季范围标记（如 S01-S07、Season 1-7、第1-7季等）。
+// 包含多季范围的目录是整部剧集或合集包的容器，绝不应被识别为单个季目录。
+func IsMultiSeasonRangeDir(name string) bool {
+	raw := strings.TrimSpace(name)
+	if raw == "" {
+		return false
+	}
+	return multiSeasonRangeRe.MatchString(raw)
 }
 
 func IsSeasonDirName(name string) bool {
@@ -56,6 +69,9 @@ func SingleSeasonShowDirTitle(name string) string {
 
 // seasonInfoStart 返回季信息最早出现的位置；无季信息返回 -1。
 func seasonInfoStart(name string) int {
+	if IsMultiSeasonRangeDir(name) {
+		return -1
+	}
 	best := -1
 	for _, item := range seasonDirPatterns {
 		if loc := item.re.FindStringSubmatchIndex(name); len(loc) >= 2 {
@@ -162,7 +178,7 @@ func hasSpecialContentAncestor(ancestors []Ancestor) bool {
 
 func hasTVHintAncestor(ancestors []Ancestor) bool {
 	for _, anc := range ancestors {
-		if IsSeasonDirName(anc.Name) || IsEpisodeRangeDirName(anc.Name) || isStructuralSpecialDirName(anc.Name) {
+		if IsSeasonDirName(anc.Name) || IsEpisodeRangeDirName(anc.Name) || isStructuralSpecialDirName(anc.Name) || IsMultiSeasonRangeDir(anc.Name) {
 			return true
 		}
 		parsed := NormalizeParsedMedia(ParseDirName(anc.Name))
@@ -296,6 +312,7 @@ var (
 	seasonRangeTitleRe        = regexpMust(`^前?[一二三四五六七八九十\d]+季$`)
 	standaloneMovieDirHintRe  = regexpMust(`(?i)(?:剧场版|映画|电影版|大电影|院线版|Movie\s*Edition)`)
 	seasonOnlyTitleRe         = regexpMust(`(?i)^第\s*\d{1,3}\s*季$`)
+	multiSeasonRangeRe        = regexpMust(`(?i)(?:s\s*0*\d{1,3}\s*[-~～至到]\s*s?0*\d{1,3}\b|seasons?\s*0*\d{1,3}\s*[-~～至到]\s*(?:season\s*)?0*\d{1,3}\b|series\s*0*\d{1,3}\s*[-~～至到]\s*(?:series\s*)?0*\d{1,3}\b|第?\s*0*\d{1,3}\s*[-~～至到]\s*0*\d{1,3}\s*[季部]|第\s*0*\d{1,3}\s*[季部]\s*[-~～至到与和]\s*第?\s*0*\d{1,3}\s*[季部])`)
 )
 
 func regexpMust(pattern string) *regexp.Regexp {

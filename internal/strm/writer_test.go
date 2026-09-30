@@ -199,3 +199,11 @@ func TestMetadataSyncerMigratesAlignedISOFileWithoutDownload(t *testing.T) {
 		t.Fatalf("migrated metadata = %q, err=%v", got, err)
 	}
 }
+
+func TestBuildPlayURLUnescapedFilename(t *testing.T) {
+	url := BuildPlayURL("http://127.0.0.1:5211", 1, "test-file-id", "奥本海默 (2023).mkv", "token123", false, nil)
+	want := "http://127.0.0.1:5211/api/strm/play/1/" + EncodeFileKey("test-file-id") + "/t/token123/n/奥本海默 (2023).mkv"
+	if url != want {
+		t.Fatalf("BuildPlayURL() = %q, want %q", url, want)
+	}
+}
